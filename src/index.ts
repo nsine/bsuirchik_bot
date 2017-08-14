@@ -1,26 +1,13 @@
-import * as TelegramBot from 'node-telegram-bot-api';
 import * as mongoose from 'mongoose';
 
-import { config } from './config';
 import { BsuirScheduleService } from './bsuir-schedule-service';
+import { Bot } from './bot';
 
+(<any>mongoose).Promise = global.Promise;
 mongoose.connect('mongodb://localhost/bsuirchik_bot');
 
-const bot = new TelegramBot(config.tgToken, { polling: true });
-
-bot.onText(/\/echo (.+)/, (msg, match) => {
-  const chatId = msg.chat.id;
-  const response = match[1]; // the captured "whatever"
-
-  bot.sendMessage(chatId, response);
-});
-
-bot.on('message', (msg) => {
-  const chatId = msg.chat.id;
-
-  bot.sendMessage(chatId, 'Received your fucking f message');
-});
-
+const bot = new Bot();
+bot.run();
 
 const bsuirScheduleService = new BsuirScheduleService();
 console.log('started');

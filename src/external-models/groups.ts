@@ -5,10 +5,10 @@ export interface GroupsResponseRaw {
 }
 
 export interface GroupRaw {
-    id: string[];
-    calendarId: string[];
-    facultyId: string[];
-    name: string[];
-    course: string[];
-    specialityDepartmentEducationFormId: string[];
+    id: string;
+    calendarId: string;
+    facultyId: string;
+    name: string;
+    course: string;
+    specialityDepartmentEducationFormId: string;
 }
