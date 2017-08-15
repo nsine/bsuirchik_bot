@@ -17,9 +17,13 @@ export class BsuirScheduleService {
   }
 
   private async updateGroupsList() {
+    console.log('update groups')
+
     if (moment().diff(this.lastUpdateTime) < ONE_MONTH.asMilliseconds()) {
       return;
     }
+
+    console.log('updating groups')
 
     let data = await BsuirApiHelper.getAllGroups();
     let groupsDataWrapped = await XmlParser.parse(data) as GroupsResponseRaw;

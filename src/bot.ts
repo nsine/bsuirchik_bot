@@ -1,9 +1,10 @@
 import * as TelegramBot from 'node-telegram-bot-api/src/telegram';
 
 import { config } from './config';
-import { Group } from './models/group';
+import { Group, ScheduleDay, ScheduleItem } from './models/group';
 import { User } from './models/user';
 import { UserStatus } from './models/user-status';
+import { Employee } from './models/employee';
 import { ScheduleResponseRaw } from './external-models/schedule';
 import { BsuirApiHelper } from './bsuir-api-helper';
 import { XmlParser } from './utils/xml-parser';
@@ -12,11 +13,12 @@ export class Bot {
     private _bot: TelegramBot;
     private _commands: Map<RegExp, any>;
 
-    constructor () {
+    constructor() {
         this._commands = new Map([
             [/\/echo (.+)/, this.onEcho.bind(this)],
             [/\/start/, this.onStart.bind(this)],
             [/\/info/, this.onInfo.bind(this)],
+            [/\/today/, this.onToday.bind(this)],
             [/.+/, this.onTextMessage.bind(this)]
         ]);
     }
@@ -100,7 +102,7 @@ export class Bot {
                 if (!group.schedule) {
                     let scheduleData = await BsuirApiHelper.getScheduleByGroupId(group.id);
                     let schedule = <ScheduleResponseRaw>(await XmlParser.parse(scheduleData));
-                    group.schedule = schedule;
+                    group.schedule = await this.createScheduleModelFromData(schedule);
                     await group.save();
                 }
             } catch (e) {
@@ -114,7 +116,102 @@ export class Bot {
         }
     }
 
+    async onToday(msg, match) {
+        const chatId = msg.chat.id;
+
+        let user = await User.findOne({ telegramId: chatId });
+        if (!user) return;
+
+        // Find schedule for today
+        let group = await Group.findOne({
+            name: user.group
+        });
+
+        let scheduleDay = group.schedule.find(day => day.dayNumber === new Date().getDay() - 1);
+
+        if (!scheduleDay) {
+            this._bot.sendMessage(chatId, 'No schedule for today');
+            return;
+        }
+
+        // TODO cache week number
+        let weekNumber = await BsuirApiHelper.getWeekNumberByDate(new Date());
+
+        let scheduleItems = scheduleDay.schedule.filter(item => item.weekNumbers.indexOf(weekNumber) !== -1);
+
+        let response = scheduleItems.map(item =>
+            `${item.time} ${item.lessonType} ${item.subjectName} ${item.auditory}`).join('\n');
+
+        if (!response) {
+            this._bot.sendMessage(chatId, 'No lessons today');
+        } else {
+            this._bot.sendMessage(chatId, response);
+        }
+    }
+
     askRequiredInfo(chatId) {
         this._bot.sendMessage(chatId, 'Enter your group number');
+    }
+
+    async createScheduleModelFromData(scheduleData: ScheduleResponseRaw) {
+        let schedule: ScheduleDay[] = [];
+
+        for (let day of scheduleData.scheduleXmlModels.scheduleModel) {
+            let scheduleDay: ScheduleDay = {
+                dayNumber: BsuirApiHelper.getDayNumberByName(day.weekDay),
+                schedule: []
+            };
+
+            for (let item of day.schedule) {
+                let scheduleItem: ScheduleItem = {
+                    auditory: item.auditory,
+                    lessonType: item.lessonType,
+                    note: item.note,
+                    subgroup: +item.numSubgroup,
+                    subjectName: item.subject,
+                    time: item.lessonTime,
+                    employeeId: null,
+                    weekNumbers: []
+                };
+
+                if (item.employee) {
+                    // Find employee in db
+                    let employee = await Employee.findOne({ apiId: item.employee.id });
+                    if (!employee) {
+                        employee = new Employee({
+                            apiId: item.employee.id,
+                            firstName: item.employee.firstName,
+                            middleName: item.employee.middleName,
+                            lastName: item.employee.lastName,
+                            rank: item.employee.rank,
+                            calendarId: item.employee.calendarId,
+                            academicDepartment: []
+                        });
+
+                        if (typeof item.employee.academicDepartment === 'string') {
+                            employee.academicDepartment.push(item.employee.academicDepartment);
+                        } else {
+                            employee.academicDepartment = item.employee.academicDepartment;
+                        }
+
+                        await employee.save();
+                    }
+
+                    scheduleItem.employeeId = employee._id;
+                }
+
+                if (typeof item.weekNumber === 'string') {
+                    scheduleItem.weekNumbers.push(+item.weekNumber);
+                } else {
+                    scheduleItem.weekNumbers = item.weekNumber.map(n => +n);
+                }
+
+                scheduleDay.schedule.push(scheduleItem);
+            }
+
+            schedule.push(scheduleDay);
+        }
+
+        return schedule;
     }
 }

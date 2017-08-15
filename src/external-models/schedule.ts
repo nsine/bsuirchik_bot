@@ -13,10 +13,10 @@ export interface ScheduleDayRaw {
 
 export interface ScheduleItemRaw {
     zaoch: boolean;
-    weekNumber: number[];
+    weekNumber: string[] | string;
     subject: string;
     studentGroup: string;
-    numSubgroup: number;
+    numSubgroup: string;
     note: string;
     lessonType: string;
     lessonTime: string;

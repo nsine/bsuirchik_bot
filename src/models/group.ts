@@ -1,7 +1,20 @@
 import * as mongoose from 'mongoose';
+import { Employee } from './employee';
 
-interface ScheduleDay {
+export interface ScheduleDay {
+  dayNumber: number;
+  schedule: ScheduleItem[];
+}
 
+export interface ScheduleItem {
+  subjectName: string;
+  subgroup: number;
+  note: string;
+  lessonType: string;
+  time: string;
+  auditory: string;
+  employeeId: mongoose.Schema.Types.ObjectId;
+  weekNumbers: number[];
 }
 
 interface IGroup extends mongoose.Document {
@@ -9,7 +22,7 @@ interface IGroup extends mongoose.Document {
   name: string;
   course: number;
   facultyId: number;
-  schedule: any;
+  schedule: ScheduleDay[];
 }
 
 const GroupSchema = new mongoose.Schema({
