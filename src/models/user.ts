@@ -1,5 +1,5 @@
 import * as mongoose from 'mongoose';
-import { UserStatus } from "./user-status";
+import { UserStatus } from './user-status';
 
 interface IUser extends mongoose.Document {
   telegramId: string;
