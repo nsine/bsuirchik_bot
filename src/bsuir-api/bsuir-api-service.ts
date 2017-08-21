@@ -12,14 +12,16 @@ export class BsuirApiService {
     return fetch(config.apiUrls.allGroups)
       .then(res => res.text())
       .then(data => XmlParser.parse(data))
-      .then(groupsDataWrapped => BsuirApiService.createGroupsModelFromData);
+      .then(BsuirApiService.createGroupsModelFromData)
+      .catch(e => console.log(JSON.stringify(e)));
   }
 
   static getScheduleByGroupId(groupId) {
     return fetch(`${config.apiUrls.scheduleById}/${groupId}`)
       .then(res => res.text())
       .then(data => XmlParser.parse(data))
-      .then(BsuirApiService.createScheduleModelFromData);
+      .then(BsuirApiService.createScheduleModelFromData)
+      .catch(e => console.log(JSON.stringify(e)));
   }
 
   static getWeekNumberByDate(date: Date) {
@@ -36,7 +38,6 @@ export class BsuirApiService {
     let groups: IGroup[] = [];
 
     for (let rawGroup of groupsData) {
-      // There can be no group or course, so need to check
       let groupData: any = {
         id: +rawGroup.id,
         name: rawGroup.name,
@@ -76,10 +77,17 @@ export class BsuirApiService {
           note: item.note,
           subgroup: +item.numSubgroup,
           subjectName: item.subject,
-          time: item.lessonTime,
+          timeFrom: null,
+          timeTo: null,
           employeeId: null,
           weekNumbers: []
         };
+
+        let times = item.lessonTime.match(/(\d+:\d+)/g);
+
+        let [timeFrom, timeTo] = times.map(s => moment(s, 'HH:mm')).map(m => m.toDate());
+        scheduleItem.timeFrom = timeFrom;
+        scheduleItem.timeTo = timeTo;
 
         if (item.employee) {
           let employee = await BsuirApiService.findOrSaveEmployee(item.employee);

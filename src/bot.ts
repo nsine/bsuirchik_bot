@@ -8,16 +8,14 @@ import { UserStatus } from './models/user-status';
 import { Employee } from './models/employee';
 import { BsuirApiService } from './bsuir-api/bsuir-api-service';
 import { XmlParser } from './utils/xml-parser';
-import { getTodaySchedule, getScheduleForDay, getScheduleForWeek } from './bot-helpers/schedule-helper';
+import { getTodaySchedule, getScheduleForDay, getScheduleForWeek, getScheduleForNow } from './bot-helpers/schedule-helper';
 import * as presenters from './presenters';
 import constants from './constants';
+import { minutesOfDay } from './utils/date-utils';
 
 export class Bot {
   private _bot: TelegramBot;
   private _commands: Map<RegExp, any>;
-  private _state: any = {
-
-  };
 
   constructor() {
     this._commands = new Map([
@@ -27,6 +25,7 @@ export class Bot {
       [/\/today/, this.onToday.bind(this)],
       [/\/tomorrow/, this.onTomorrow.bind(this)],
       [/\/week\s?(\d+)?/, this.onWeek.bind(this)],
+      [/\/now/, this.onNow.bind(this)],
       [/.+/, this.onTextMessage.bind(this)]
     ]);
   }
@@ -44,7 +43,7 @@ export class Bot {
 
   onEcho(msg, match) {
     const chatId = msg.chat.id;
-    const response = match[1]; // the captured "whatever"
+    const response = match[1];
 
     this._bot.sendMessage(chatId, response);
   }
@@ -62,6 +61,32 @@ export class Bot {
       const response = user.group;
       this._bot.sendMessage(chatId, response);
     }
+  }
+
+  async onNow(msg, match) {
+    const chatId = msg.chat.id;
+    let user = await User.findOne({ telegramId: chatId });
+    if (!user) return;
+
+    let { currentLessons, nextLessons } = await getScheduleForNow(user.group);
+    let responseLines: string[] = [];
+
+    if (currentLessons.length === 0) {
+      responseLines.push('You can relax now');
+    } else {
+      for (let item of currentLessons) {
+        responseLines.push(presenters.scheduleItem(item));
+      }
+    }
+
+    if (nextLessons.length !== 0) {
+      responseLines.push('\nNext:');
+      for (let item of nextLessons) {
+        responseLines.push(presenters.scheduleItem(item));
+      }
+    }
+
+    this._bot.sendMessage(chatId, responseLines.join('\n'));
   }
 
   async onStart(msg, match) {
@@ -82,6 +107,35 @@ export class Bot {
       this.askRequiredInfo(chatId);
     }).catch(err => console.log);
 
+  }
+
+  async onToday(msg, match) {
+    const day = new Date();
+    return await this.sendScheduleForDay(msg, day, 'today');
+  }
+
+  async onTomorrow(msg, match) {
+    let day = moment(new Date());
+    day = day.add(1, 'day');
+
+    console.log(day);
+    return await this.sendScheduleForDay(msg, day.toDate(), 'tomorrow');
+  }
+
+  onWeek(msg, match) {
+    let weekNumber: number;
+    if (match[1]) {
+      weekNumber = +match[1];
+      if (isNaN(weekNumber) || !(weekNumber >= 1 && weekNumber <= constants.WeekCount)) {
+        this._bot.sendMessage(msg.chatId, 'Invalid week number');
+        return;
+      }
+      this.sendScheduleForWeek(msg, weekNumber);
+    } else {
+      weekNumber = BsuirApiService.getWeekNumberByDate(new Date()).then(weekNumber => {
+        this.sendScheduleForWeek(msg, weekNumber);
+      });
+    }
   }
 
   async onTextMessage(msg, match) {
@@ -116,37 +170,16 @@ export class Bot {
         return;
       }
     } else {
+      console.log('on text');
       // Add logic for parsing text messages
       let response = `Success: ${match[0]}`;
-      this._bot.sendMessage(chatId, response);
-    }
-  }
-
-  async onToday(msg, match) {
-    const day = new Date();
-    return await this.sendScheduleForDay(msg, day, 'today');
-  }
-
-  async onTomorrow(msg, match) {
-    let day = moment(new Date());
-    day = day.add(1, 'day');
-
-    console.log(day);
-    return await this.sendScheduleForDay(msg, day.toDate(), 'tomorrow');
-  }
-
-  onWeek(msg, match) {
-    let weekNumber: number;
-    if (match[1]) {
-      weekNumber = +match[1];
-      if (isNaN(weekNumber) || !(weekNumber >= 1 && weekNumber <= constants.WeekCount)) {
-        this._bot.sendMessage(msg.chatId, 'Invalid week number');
-        return;
-      }
-      this.sendScheduleForWeek(msg, weekNumber);
-    } else {
-      weekNumber = BsuirApiService.getWeekNumberByDate(new Date()).then(weekNumber => {
-        this.sendScheduleForWeek(msg, weekNumber);
+      this._bot.sendMessage(chatId, response, {
+        reply_markup: {
+          keyboard: [
+            [{ text: 'Today' }, { text: 'Tomorrow' }],
+            [{ text: 'Week' }]
+          ]
+        }
       });
     }
   }

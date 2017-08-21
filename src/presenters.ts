@@ -1,5 +1,12 @@
+import * as moment from 'moment';
+
 import { IScheduleItem, IScheduleDay } from './models';
-import { daysByIndex } from './utils/day-helper';
+import { daysByIndex, minutesOfDay } from './utils/date-utils';
+
+interface PresentScheduleItemOptions {
+  time: boolean;
+  employee: boolean;
+}
 
 export function scheduleForDay(scheduleItems: IScheduleItem[], dayName) {
   if (scheduleItems === null) {
@@ -14,23 +21,40 @@ export function scheduleForDay(scheduleItems: IScheduleItem[], dayName) {
     let item = scheduleItems[i];
     let prevItem = scheduleItems[i - 1];
 
-    let timeInfo = '';
-    if (prevItem && prevItem.time === item.time) {
-      timeInfo = '\t\t\t';
-    } else {
-      timeInfo = item.time;
+    let scheduleItemOptions: PresentScheduleItemOptions = {
+      time: true,
+      employee: false
+    };
+
+    if (prevItem && minutesOfDay(prevItem.timeFrom) === minutesOfDay(item.timeFrom)) {
+      scheduleItemOptions.time = false;
     }
 
-    let line = `${timeInfo} ${item.lessonType} ${item.subjectName} ${item.auditory}`;
-
-    if (item.subgroup !== 0) {
-      line = `${line} (${item.subgroup} subgroup)`
-    }
-
+    let line = scheduleItem(item, scheduleItemOptions);
     responseLines.push(line);
   }
 
   return responseLines.join('\n');
+}
+
+export function scheduleItem(item: IScheduleItem, options: PresentScheduleItemOptions = {
+  time: true,
+  employee: false
+}) {
+  let timeInfo = '';
+  if (options.time) {
+    timeInfo = `${moment(item.timeFrom).format('HH:mm')}-${moment(item.timeTo).format('HH:mm')}`;
+  } else {
+    timeInfo = ' '.repeat(22);
+  }
+
+  let line = `${timeInfo} ${item.lessonType} ${item.subjectName} ${item.auditory}`;
+
+  if (item.subgroup !== 0) {
+    line = `${line} (${item.subgroup} subgroup)`
+  }
+
+  return line;
 }
 
 export function scheduleForWeek(schedule: IScheduleDay[]) {

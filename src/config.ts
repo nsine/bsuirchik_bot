@@ -1,5 +1,8 @@
+const fs = require('fs');
+const secrets = JSON.parse(fs.readFileSync('src/secrets.json', 'utf8'));
+
 export let config = {
-    tgToken: '300997840:AAFCQ4Kuh5VYfbfqdyNiKrXbykJjCi9NHNY',
+    tgToken: secrets.tgToken,
     apiUrls: {
         allGroups: 'https://www.bsuir.by/schedule/rest/studentGroup',
         scheduleById: 'https://www.bsuir.by/schedule/rest/schedule',

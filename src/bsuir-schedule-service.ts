@@ -7,6 +7,7 @@ import { BsuirApiService } from './bsuir-api/bsuir-api-service';
 
 const ONE_MONTH = moment.duration(1, 'months');
 
+// TODO Implement autoupdating groups
 export class BsuirScheduleService {
   lastUpdateTime: any;
 
@@ -16,13 +17,9 @@ export class BsuirScheduleService {
   }
 
   private async updateGroupsList() {
-    console.log('update groups')
-
     if (moment().diff(this.lastUpdateTime) < ONE_MONTH.asMilliseconds()) {
       return;
     }
-
-    console.log('updating groups')
 
     let groups = await BsuirApiService.getAllGroups();
 

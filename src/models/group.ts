@@ -11,7 +11,8 @@ export interface IScheduleItem {
   subgroup: number;
   note: string;
   lessonType: string;
-  time: string;
+  timeFrom: Date;
+  timeTo: Date;
   auditory: string;
   employeeId: mongoose.Schema.Types.ObjectId;
   weekNumbers: number[];
