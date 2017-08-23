@@ -1,4 +1,4 @@
-import * as TelegramBot from 'node-telegram-bot-api/src/telegram';
+import TelegramBot = require('node-telegram-bot-api');
 import * as moment from 'moment';
 
 import { config } from './config';
@@ -12,6 +12,7 @@ import { getTodaySchedule, getScheduleForDay, getScheduleForWeek, getScheduleFor
 import * as presenters from './presenters';
 import constants from './constants';
 import { minutesOfDay } from './utils/date-utils';
+import state from './state';
 
 export class Bot {
   private _bot: TelegramBot;
@@ -25,6 +26,7 @@ export class Bot {
       [/\/today/, this.onToday.bind(this)],
       [/\/tomorrow/, this.onTomorrow.bind(this)],
       [/\/week\s?(\d+)?/, this.onWeek.bind(this)],
+      [/\/wnumber/, this.onWeekNumber.bind(this)],
       [/\/now/, this.onNow.bind(this)],
       [/.+/, this.onTextMessage.bind(this)]
     ]);
@@ -111,7 +113,7 @@ export class Bot {
 
   async onToday(msg, match) {
     const day = new Date();
-    return await this.sendScheduleForDay(msg, day, 'today');
+    return await this.sendScheduleForToday(msg);
   }
 
   async onTomorrow(msg, match) {
@@ -130,12 +132,15 @@ export class Bot {
         this._bot.sendMessage(msg.chatId, 'Invalid week number');
         return;
       }
-      this.sendScheduleForWeek(msg, weekNumber);
     } else {
-      weekNumber = BsuirApiService.getWeekNumberByDate(new Date()).then(weekNumber => {
-        this.sendScheduleForWeek(msg, weekNumber);
-      });
+      weekNumber = state.weekNumber;
     }
+    this.sendScheduleForWeek(msg, weekNumber);
+  }
+
+  onWeekNumber(msg, match) {
+    let response = `Current week is ${state.weekNumber}`;
+    this._bot.sendMessage(msg.chat.id, response)
   }
 
   async onTextMessage(msg, match) {
@@ -196,13 +201,24 @@ export class Bot {
     this._bot.sendMessage(chatId, view);
   }
 
+  async sendScheduleForToday(msg) {
+    const chatId = msg.chat.id;
+
+    let user = await User.findOne({ telegramId: chatId });
+    if (!user) return;
+
+    let scheduleItems = await getTodaySchedule(user.group);
+
+    let view = presenters.scheduleForDay(scheduleItems, 'today;');
+    this._bot.sendMessage(chatId, view);
+  }
+
   async sendScheduleForDay(msg, day: Date, dayName: string) {
     const chatId = msg.chat.id;
 
     let user = await User.findOne({ telegramId: chatId });
     if (!user) return;
 
-    // TODO cache week number
     let weekNumber = await BsuirApiService.getWeekNumberByDate(day);
 
     let scheduleItems = await getScheduleForDay(user.group, weekNumber, day.getDay() - 1);

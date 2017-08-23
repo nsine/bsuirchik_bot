@@ -3,10 +3,10 @@ import * as moment from 'moment';
 
 import { minutesOfDay } from '../utils/date-utils'
 import { Group } from '../models';
-import { BsuirApiService } from '../bsuir-api/bsuir-api-service';
+import state from '../state';
 
 export async function getTodaySchedule(groupId: string) {
-  let weekNumber = await BsuirApiService.getWeekNumberByDate(new Date());
+  let weekNumber = state.weekNumber;
   let dayNumber = new Date().getDay() - 1;
   return getScheduleForDay(groupId, weekNumber, dayNumber);
 }

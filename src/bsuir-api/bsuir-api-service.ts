@@ -39,7 +39,7 @@ export class BsuirApiService {
 
     for (let rawGroup of groupsData) {
       let groupData: any = {
-        id: +rawGroup.id,
+        apiId: +rawGroup.id,
         name: rawGroup.name,
         course: null,
         facultyId: null,

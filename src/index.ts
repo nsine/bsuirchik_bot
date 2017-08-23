@@ -1,13 +1,14 @@
 import * as mongoose from 'mongoose';
 
-import { BsuirScheduleService } from './bsuir-schedule-service';
+import { runJobs } from './job-scheduler';
 import { Bot } from './bot';
+import logger from './logger';
 
 (<any>mongoose).Promise = global.Promise;
-mongoose.connect('mongodb://localhost/bsuirchik_bot');
+mongoose.connect('mongodb://localhost/bsuirchik_bot', { useMongoClient: true });
 
 const bot = new Bot();
 bot.run();
 
-const bsuirScheduleService = new BsuirScheduleService();
-console.log('started');
+runJobs();
+logger.info('App is started');

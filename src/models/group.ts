@@ -19,7 +19,7 @@ export interface IScheduleItem {
 }
 
 export interface IGroup extends mongoose.Document {
-  id: number;
+  apiId: number;
   name: string;
   course: number;
   facultyId: number;
@@ -27,7 +27,7 @@ export interface IGroup extends mongoose.Document {
 }
 
 const GroupSchema = new mongoose.Schema({
-  id: { type: Number, required: true },
+  apiId: { type: Number, required: true },
   name: { type: String, required: true },
   course: Number,
   facultyId: Number,
