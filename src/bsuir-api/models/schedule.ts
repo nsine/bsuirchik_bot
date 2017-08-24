@@ -8,7 +8,7 @@ export interface ScheduleResponseRaw {
 
 export interface ScheduleDayRaw {
     weekDay: string;
-    schedule: ScheduleItemRaw[];
+    schedule: ScheduleItemRaw[] | ScheduleItemRaw;
 }
 
 export interface ScheduleItemRaw {

@@ -1,9 +1,10 @@
 import * as fetch from 'node-fetch';
 import * as moment from 'moment';
+import logger from '../logger';
 
 import { config } from '../config';
 import { XmlParser } from '../utils/xml-parser';
-import { ScheduleResponseRaw, EmployeeRaw } from './models';
+import { ScheduleResponseRaw, EmployeeRaw, ScheduleItemRaw } from './models';
 import { IScheduleDay, IScheduleItem, IGroup, Employee } from '../models';
 import { getDayNumberByName } from './bsuir-api-utils';
 
@@ -13,7 +14,7 @@ export class BsuirApiService {
       .then(res => res.text())
       .then(data => XmlParser.parse(data))
       .then(BsuirApiService.createGroupsModelFromData)
-      .catch(e => console.log(JSON.stringify(e)));
+      .catch(e => logger.error(e));
   }
 
   static getScheduleByGroupId(groupId) {
@@ -21,14 +22,13 @@ export class BsuirApiService {
       .then(res => res.text())
       .then(data => XmlParser.parse(data))
       .then(BsuirApiService.createScheduleModelFromData)
-      .catch(e => console.log(JSON.stringify(e)));
+      .catch(e => logger.error(e));
   }
 
   static getWeekNumberByDate(date: Date) {
     let dateString = moment(date).format('DD.MM.YYYY');
     let a = `${config.apiUrls.weekNumberByWeek}/${dateString}`;
     return fetch(a).then(res => res.text()).then(n => {
-      console.log(n);
       return +n;
     });
   }
@@ -70,9 +70,16 @@ export class BsuirApiService {
         schedule: []
       };
 
-      for (let item of day.schedule) {
+      let daySchedule: ScheduleItemRaw[];
+      if (Array.isArray(day.schedule)) {
+        daySchedule = day.schedule;
+      } else {
+        daySchedule = [day.schedule];
+      }
+
+      for (let item of daySchedule) {
         let scheduleItem: IScheduleItem = {
-          auditory: item.auditory,
+          auditory: item.auditory || '',
           lessonType: item.lessonType,
           note: item.note,
           subgroup: +item.numSubgroup,

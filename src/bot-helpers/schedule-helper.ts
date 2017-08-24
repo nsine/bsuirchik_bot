@@ -41,10 +41,15 @@ export async function getScheduleForWeek(groupId: string, weekNumber: number) {
 }
 
 export async function getScheduleForNow(groupId: string) {
-  let scheduleItems = await getTodaySchedule(groupId);
+  let result = {
+    currentLessons: [],
+    nextLessons: []
+  }
 
-  let currentLessons = [];
-  let nextLessons = [];
+  let scheduleItems = await getTodaySchedule(groupId);
+  if (!scheduleItems) {
+    return result;
+  }
 
   let now = moment();
 
@@ -57,7 +62,7 @@ export async function getScheduleForNow(groupId: string) {
     let timeToMinutes = minutesOfDay(timeTo);
 
     if (minutesOfDay(now) >= timeFromMinutes && minutesOfDay(now) <= timeToMinutes) {
-      currentLessons.push(item);
+      result.currentLessons.push(item);
       nowLessonIndex = index;
     }
   });
@@ -65,14 +70,14 @@ export async function getScheduleForNow(groupId: string) {
   let needToShowNextLesson = false;
 
   // If lessons will be later
-  if (currentLessons.length === 0 &&
+  if (result.currentLessons.length === 0 &&
       scheduleItems &&
       minutesOfDay(now) < minutesOfDay(scheduleItems[0].timeFrom)) {
     needToShowNextLesson = true;
   } else {
     // If more than half of the lesson has passed
-    if (minutesOfDay(now) - minutesOfDay(currentLessons[0].timeFrom) >
-        minutesOfDay(currentLessons[0].timeTo) - minutesOfDay(now)) {
+    if (minutesOfDay(now) - minutesOfDay(result.currentLessons[0].timeFrom) >
+        minutesOfDay(result.currentLessons[0].timeTo) - minutesOfDay(now)) {
       needToShowNextLesson = true;
     }
   }
@@ -80,12 +85,9 @@ export async function getScheduleForNow(groupId: string) {
   if (needToShowNextLesson) {
     let nextLesson = scheduleItems[nowLessonIndex + 1];
     if (nextLesson) {
-      nextLessons = scheduleItems.filter(item => item.timeFrom === nextLesson.timeFrom);
+      result.nextLessons = scheduleItems.filter(item => item.timeFrom === nextLesson.timeFrom);
     }
   }
 
-  return {
-    currentLessons: currentLessons,
-    nextLessons: nextLessons
-  };
+  return result;
 }

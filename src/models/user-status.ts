@@ -1,3 +1,3 @@
 export enum UserStatus {
-    New, Full
+    New, EnteringGroup, Basic
 }

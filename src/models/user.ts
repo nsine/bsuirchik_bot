@@ -1,7 +1,7 @@
 import * as mongoose from 'mongoose';
 import { UserStatus } from './user-status';
 
-interface IUser extends mongoose.Document {
+export interface IUser extends mongoose.Document {
   telegramId: string;
   group: string;
   status: UserStatus;
