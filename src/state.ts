@@ -3,7 +3,7 @@ interface IAppState {
 }
 
 let state: IAppState = {
-  weekNumber: 2
+  weekNumber: 4
 }
 
 export default state;

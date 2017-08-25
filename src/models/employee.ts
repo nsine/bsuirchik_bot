@@ -5,9 +5,10 @@ export interface IEmployee extends mongoose.Document {
     firstName: string;
     middleName: string;
     lastName: string;
-    rank: string;
-    calendarId: string;
-    academicDepartment: string[];
+    rank?: string;
+    calendarId?: string;
+    academicDepartment?: string[];
+    fullNameKey?: string;
 }
 
 const EmployeeSchema = new mongoose.Schema({
@@ -17,7 +18,10 @@ const EmployeeSchema = new mongoose.Schema({
     lastName: { type: String, required: true },
     rank: String,
     calendarId: String,
-    academicDepartment: [String]
+    academicDepartment: [String],
+    fullNameKey: String
 });
+
+EmployeeSchema.index({ fullNameKey: 1 });
 
 export const Employee = mongoose.model<IEmployee>('Employee', EmployeeSchema);

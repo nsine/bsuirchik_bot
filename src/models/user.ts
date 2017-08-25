@@ -3,7 +3,7 @@ import { UserStatus } from './user-status';
 
 export interface IUser extends mongoose.Document {
   telegramId: string;
-  group: string;
+  group?: string;
   status: UserStatus;
 }
 

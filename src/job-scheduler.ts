@@ -5,6 +5,7 @@ import logger from './logger';
 import state from './state';
 import { Group } from './models/group';
 import { BsuirApiService } from './bsuir-api/bsuir-api-service';
+import constants from './constants';
 
 const environment = process.env.NODE_ENV;
 
@@ -41,13 +42,13 @@ function runUpdateWeekDayJob() {
   updateWeekRule.dayOfWeek = 0;
 
   async function updateWeekDay() {
-    try {
-      let weekDay = await BsuirApiService.getWeekNumberByDate(new Date());
-      state.weekNumber = weekDay;
-      logger.info(`Week number updated ${weekDay}`)
-    } catch (e) {
-      logger.error(e.message);
+    let weekDay = await BsuirApiService.getWeekNumberByDate(new Date());
+    if (isNaN(weekDay)) {
+      weekDay = (state.weekNumber % constants.WeekCount) + 1;
+      logger.warn(`Week number updated offline`);
     }
+    state.weekNumber = weekDay;
+    logger.info(`Week number updated ${weekDay}`)
   }
 
   updateWeekDay();

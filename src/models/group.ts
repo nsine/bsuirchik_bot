@@ -21,9 +21,10 @@ export interface IScheduleItem {
 export interface IGroup extends mongoose.Document {
   apiId: number;
   name: string;
-  course: number;
-  facultyId: number;
-  schedule: IScheduleDay[];
+  course?: number;
+  facultyId?: number;
+  schedule?: IScheduleDay[];
+  employees?: mongoose.Types.ObjectId[]
 }
 
 const GroupSchema = new mongoose.Schema({
@@ -31,7 +32,8 @@ const GroupSchema = new mongoose.Schema({
   name: { type: String, required: true },
   course: Number,
   facultyId: Number,
-  schedule: Object
+  schedule: [Object],
+  employees: [mongoose.SchemaTypes.ObjectId]
 });
 
 export const Group = mongoose.model<IGroup>('Group', GroupSchema);

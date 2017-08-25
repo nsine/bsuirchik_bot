@@ -11,6 +11,7 @@ import {
   getTodaySchedule, getScheduleForDay,
   getScheduleForWeek, getScheduleForNow
 } from './bot-helpers/schedule-helper';
+import { findEmployees } from './bot-helpers/employees-helper'
 import * as presenters from './presenters';
 import constants from './constants';
 import { minutesOfDay } from './utils/date-utils';
@@ -55,6 +56,7 @@ export class Bot {
       [/\/week\s?(\d+)?/, this.onWeek.bind(this)],
       [/\/whatweek/, this.onWhatWeek.bind(this)],
       [/\/now/, this.onNow.bind(this)],
+      [/\/where\s?(.+)?/, this.onWhere.bind(this)],
       [/.+/, this.onTextMessage.bind(this)]
     ]);
 
@@ -77,19 +79,19 @@ export class Bot {
     }
   }
 
-  onEcho(msg, match) {
+  private onEcho(msg, match) {
     const chatId = msg.chat.id;
     const response = match[1];
 
     this._bot.sendMessage(chatId, response);
   }
 
-  onHelp(msg, match) {
+  private onHelp(msg, match) {
     const response = 'Somebody have to right the help info...';
     this._bot.sendMessage(msg.chat.id, response, defaultAnswerOptions);
   }
 
-  async onSettings(msg, match) {
+  private async onSettings(msg, match) {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
 
@@ -99,7 +101,7 @@ export class Bot {
     this.startConfiguration(user);
   }
 
-  async onNow(msg, match) {
+  private async onNow(msg, match) {
     const chatId = msg.chat.id;
     let user = await User.findOne({ telegramId: chatId });
     if (!user) return;
@@ -125,7 +127,7 @@ export class Bot {
     this._bot.sendMessage(chatId, responseLines.join('\n'));
   }
 
-  async onStart(msg, match) {
+  private async onStart(msg, match) {
     this.onHelp(msg, match);
 
     const chatId = msg.chat.id;
@@ -142,20 +144,18 @@ export class Bot {
     this.startConfiguration(user);
   }
 
-  async onToday(msg, match) {
+  private async onToday(msg, match) {
     const day = new Date();
-    return await this.sendScheduleForToday(msg);
+    await this.sendScheduleForToday(msg);
   }
 
-  async onTomorrow(msg, match) {
+  private async onTomorrow(msg, match) {
     let day = moment(new Date());
     day = day.add(1, 'day');
-
-    console.log(day);
-    return await this.sendScheduleForDay(msg, day.toDate(), 'tomorrow');
+    await this.sendScheduleForDay(msg, day.toDate(), 'tomorrow');
   }
 
-  onWeek(msg, match) {
+  private onWeek(msg, match) {
     let weekNumber: number;
     if (match[1]) {
       weekNumber = +match[1];
@@ -169,12 +169,30 @@ export class Bot {
     this.sendScheduleForWeek(msg, weekNumber);
   }
 
-  onWhatWeek(msg, match) {
+  private onWhatWeek(msg, match) {
     let response = `Current week is ${state.weekNumber}`;
     this._bot.sendMessage(msg.chat.id, response)
   }
 
-  async onTextMessage(msg, match) {
+  private async onWhere(msg, match) {
+    const chatId = msg.chat.id;
+
+    let user = await User.findOne({ telegramId: chatId });
+    if (!user) return;
+
+    let employeeName = match[1];
+    let matchedEmployees = await findEmployees(employeeName, user.group);
+
+    if (matchedEmployees.length === 0) {
+      this._bot.sendMessage(msg.chat.id, 'I can\'t find this employee');
+    }
+
+    let responseItems = matchedEmployees.map(emp => `${emp.lastName} ${emp.firstName} ${emp.middleName}`);
+
+    this._bot.sendMessage(msg.chat.id, responseItems.join('\n'));
+  }
+
+  private async onTextMessage(msg, match) {
     const chatId = msg.chat.id;
 
     let user = await User.findOne({ telegramId: chatId });
@@ -193,7 +211,7 @@ export class Bot {
     }
   }
 
-  async sendScheduleForWeek(msg, weekNumber: number) {
+  private async sendScheduleForWeek(msg, weekNumber: number) {
     const chatId = msg.chat.id;
 
     let user = await User.findOne({ telegramId: chatId });
@@ -205,7 +223,7 @@ export class Bot {
     this._bot.sendMessage(chatId, view);
   }
 
-  async sendScheduleForToday(msg) {
+  private async sendScheduleForToday(msg) {
     const chatId = msg.chat.id;
 
     let user = await User.findOne({ telegramId: chatId });
@@ -217,7 +235,7 @@ export class Bot {
     this._bot.sendMessage(chatId, view);
   }
 
-  async sendScheduleForDay(msg, day: Date, dayName: string) {
+  private async sendScheduleForDay(msg, day: Date, dayName: string) {
     const chatId = msg.chat.id;
 
     let user = await User.findOne({ telegramId: chatId });
@@ -231,13 +249,13 @@ export class Bot {
     this._bot.sendMessage(chatId, view);
   }
 
-  async startConfiguration(user: IUser) {
+  private async startConfiguration(user: IUser) {
     this._bot.sendMessage(user.telegramId, 'Enter your group number', noKeyboardOptions);
     user.status = UserStatus.EnteringGroup;
     await user.save();
   }
 
-  async updateUserGroup(match, user: IUser) {
+  private async updateUserGroup(match, user: IUser) {
     // Wait for valid group name
     let groupName = match[0];
 
@@ -264,7 +282,7 @@ export class Bot {
     }
   }
 
-  handleTextMessage(msg, match: string[], user: IUser) {
+  private handleTextMessage(msg, match: string[], user: IUser) {
     let text = match[0];
     if (this._textCommands[text]) {
       this._textCommands[text](msg, match);

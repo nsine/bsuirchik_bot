@@ -27,9 +27,13 @@ export class BsuirApiService {
 
   static getWeekNumberByDate(date: Date) {
     let dateString = moment(date).format('DD.MM.YYYY');
-    let a = `${config.apiUrls.weekNumberByWeek}/${dateString}`;
-    return fetch(a).then(res => res.text()).then(n => {
+    return fetch(`${config.apiUrls.weekNumberByWeek}/${dateString}`)
+      .then(res => res.text())
+      .then(n => {
       return +n;
+    }).catch(e => {
+      logger.error(e);
+      return NaN;
     });
   }
 
@@ -134,6 +138,10 @@ export class BsuirApiService {
       } else {
         employee.academicDepartment = employeeData.academicDepartment;
       }
+
+      let nameParts = [employee.firstName, employee.middleName, employee.lastName];
+      nameParts.sort();
+      employee.fullNameKey = nameParts.join('');
 
       await employee.save();
     }
