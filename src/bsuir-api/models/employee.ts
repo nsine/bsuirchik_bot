@@ -1,9 +1,11 @@
 export interface EmployeeRaw {
-    id: number;
     firstName: string;
-    middleName: string;
     lastName: string;
+    middleName: string;
     rank: string;
+    photoLink: string;
     calendarId: string;
-    academicDepartment: string | string[];
+    academicDepartment: string[];
+    id: number;
+    fio: string;
 }

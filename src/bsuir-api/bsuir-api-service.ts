@@ -4,41 +4,42 @@ import logger from '../logger';
 
 import { config } from '../config';
 import { XmlParser } from '../utils/xml-parser';
-import { ScheduleResponseRaw, EmployeeRaw, ScheduleItemRaw } from './models';
-import { IScheduleDay, IScheduleItem, IGroup, Employee } from '../models';
+import { ScheduleResponseRaw, EmployeeRaw, ScheduleItemRaw, GroupRaw } from './models';
+import { IScheduleDay, IScheduleItem, IGroup, Employee, IEmployee } from '../models';
 import { getDayNumberByName } from './bsuir-api-utils';
+import { parseTime } from '../utils/date-utils';
 
 export class BsuirApiService {
   static getAllGroups() {
     return fetch(config.apiUrls.allGroups)
-      .then(res => res.text())
-      .then(data => XmlParser.parse(data))
+      .then(res => res.json())
       .then(BsuirApiService.createGroupsModelFromData)
       .catch(e => logger.error(e));
   }
 
-  static getScheduleByGroupId(groupId) {
-    return fetch(`${config.apiUrls.scheduleById}/${groupId}`)
-      .then(res => res.text())
-      .then(data => XmlParser.parse(data))
+  static getScheduleByGroupId(groupId): IScheduleDay[] {
+    return fetch(`${config.apiUrls.scheduleById}?id=${groupId}`)
+      .then(res => res.json())
       .then(BsuirApiService.createScheduleModelFromData)
       .catch(e => logger.error(e));
   }
 
   static getWeekNumberByDate(date: Date) {
-    let dateString = moment(date).format('DD.MM.YYYY');
-    return fetch(`${config.apiUrls.weekNumberByWeek}/${dateString}`)
-      .then(res => res.text())
-      .then(n => {
-      return +n;
-    }).catch(e => {
-      logger.error(e);
-      return NaN;
-    });
+    throw new Error('Not implemented in BSUIR API');
   }
 
-  private static createGroupsModelFromData(groupsDataWrapped) {
-    let groupsData = groupsDataWrapped.studentGroupXmlModels.studentGroup;
+  static getCurrentWeekNumber(): number {
+    // Temp solution
+    return fetch(`${config.apiUrls.scheduleById}?id=21155`)
+      .then(res => res.json())
+      .then((data: ScheduleResponseRaw) => data.currentWeekNumber)
+      .catch(e => {
+        logger.error(e);
+        return null;
+      });
+  }
+
+  private static createGroupsModelFromData(groupsData: GroupRaw[]) {
     let groups: IGroup[] = [];
 
     for (let rawGroup of groupsData) {
@@ -68,7 +69,7 @@ export class BsuirApiService {
   private static async createScheduleModelFromData(scheduleData: ScheduleResponseRaw) {
     let schedule: IScheduleDay[] = [];
 
-    for (let day of scheduleData.scheduleXmlModels.scheduleModel) {
+    for (let day of scheduleData.schedules) {
       let scheduleDay: IScheduleDay = {
         dayNumber: getDayNumberByName(day.weekDay),
         schedule: []
@@ -83,32 +84,20 @@ export class BsuirApiService {
 
       for (let item of daySchedule) {
         let scheduleItem: IScheduleItem = {
-          auditory: item.auditory || '',
+          auditory: item.auditory.join(' ') || '',
           lessonType: item.lessonType,
           note: item.note,
-          subgroup: +item.numSubgroup,
+          subgroup: item.numSubgroup,
           subjectName: item.subject,
-          timeFrom: null,
-          timeTo: null,
+          timeFrom: parseTime(item.startLessonTime),
+          timeTo: parseTime(item.endLessonTime),
           employeeId: null,
-          weekNumbers: []
+          weekNumbers: item.weekNumber
         };
 
-        let times = item.lessonTime.match(/(\d+:\d+)/g);
-
-        let [timeFrom, timeTo] = times.map(s => moment(s, 'HH:mm')).map(m => m.toDate());
-        scheduleItem.timeFrom = timeFrom;
-        scheduleItem.timeTo = timeTo;
-
         if (item.employee) {
-          let employee = await BsuirApiService.findOrSaveEmployee(item.employee);
-          scheduleItem.employeeId = employee._id;
-        }
-
-        if (typeof item.weekNumber === 'string') {
-          scheduleItem.weekNumbers.push(+item.weekNumber);
-        } else {
-          scheduleItem.weekNumbers = item.weekNumber.map(n => +n);
+          let employees = await BsuirApiService.findOrSaveEmployee(item.employee);
+          scheduleItem.employeeId = employees.map(e => e._id);
         }
 
         scheduleDay.schedule.push(scheduleItem);
@@ -120,32 +109,32 @@ export class BsuirApiService {
     return schedule;
   }
 
-  private static async findOrSaveEmployee(employeeData: EmployeeRaw) {
-    let employee = await Employee.findOne({ apiId: employeeData.id });
-    if (!employee) {
-      employee = new Employee({
-        apiId: employeeData.id,
-        firstName: employeeData.firstName,
-        middleName: employeeData.middleName,
-        lastName: employeeData.lastName,
-        rank: employeeData.rank,
-        calendarId: employeeData.calendarId,
-        academicDepartment: []
-      });
+  private static async findOrSaveEmployee(employeesData: EmployeeRaw[]) {
+    let employees: IEmployee[] = [];
 
-      if (typeof employeeData.academicDepartment === 'string') {
-        employee.academicDepartment.push(employeeData.academicDepartment);
-      } else {
-        employee.academicDepartment = employeeData.academicDepartment;
+    for (let employeeData of employeesData) {
+      let employee = await Employee.findOne({ apiId: employeeData.id });
+      if (!employee) {
+        employee = new Employee({
+          apiId: employeeData.id,
+          firstName: employeeData.firstName,
+          middleName: employeeData.middleName,
+          lastName: employeeData.lastName,
+          rank: employeeData.rank,
+          calendarId: employeeData.calendarId,
+          academicDepartment: employeeData.academicDepartment
+        });
+
+        let nameParts = [employee.firstName, employee.middleName, employee.lastName];
+        nameParts.sort();
+        employee.fullNameKey = nameParts.join('');
+
+        await employee.save();
       }
 
-      let nameParts = [employee.firstName, employee.middleName, employee.lastName];
-      nameParts.sort();
-      employee.fullNameKey = nameParts.join('');
-
-      await employee.save();
+      employees.push(employee);
     }
 
-    return employee;
+    return employees;
   }
 }

@@ -42,8 +42,8 @@ function runUpdateWeekDayJob() {
   updateWeekRule.dayOfWeek = 0;
 
   async function updateWeekDay() {
-    let weekDay = await BsuirApiService.getWeekNumberByDate(new Date());
-    if (isNaN(weekDay)) {
+    let weekDay = await BsuirApiService.getCurrentWeekNumber();
+    if (weekDay === null) {
       weekDay = (state.weekNumber % constants.WeekCount) + 1;
       logger.warn(`Week number updated offline`);
     }

@@ -1,6 +1,7 @@
 import TelegramBot = require('node-telegram-bot-api');
 import * as moment from 'moment';
 import logger from './logger';
+import * as mongoose from 'mongoose';
 
 import { config } from './config';
 import { Group, Employee, User, IUser } from './models';
@@ -14,7 +15,7 @@ import {
 import { findEmployees } from './bot-helpers/employees-helper'
 import * as presenters from './presenters';
 import constants from './constants';
-import { minutesOfDay } from './utils/date-utils';
+import { minutesOfDay, getWeekNumberByDate } from './utils/date-utils';
 import state from './state';
 
 const buttons = {
@@ -241,7 +242,7 @@ export class Bot {
     let user = await User.findOne({ telegramId: chatId });
     if (!user) return;
 
-    let weekNumber = await BsuirApiService.getWeekNumberByDate(day);
+    let weekNumber = getWeekNumberByDate(day);
 
     let scheduleItems = await getScheduleForDay(user.group, weekNumber, day.getDay() - 1);
 
@@ -274,6 +275,16 @@ export class Bot {
       let schedule = await BsuirApiService.getScheduleByGroupId(group.apiId);
       if (schedule) {
         group.schedule = schedule;
+        // TODO Save all employees for group
+        let groupEmployees: Set<string> = new Set();
+
+        schedule.forEach(day => {
+          day.schedule.forEach(item => {
+            item.employeeId.forEach(id => groupEmployees.add(id.toHexString()));
+          });
+        });
+
+        group.employees = [...groupEmployees].map(id => mongoose.Types.ObjectId(id));
         await group.save();
       } else {
         logger.warn(`It looks like there is no schedule for ${group.name}`);

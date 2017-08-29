@@ -1,3 +1,3 @@
 export * from './employee';
-export * from './groups';
+export * from './group';
 export * from './schedule';

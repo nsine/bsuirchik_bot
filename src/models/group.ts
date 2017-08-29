@@ -14,7 +14,7 @@ export interface IScheduleItem {
   timeFrom: Date;
   timeTo: Date;
   auditory: string;
-  employeeId: mongoose.Schema.Types.ObjectId;
+  employeeId: mongoose.Types.ObjectId[];
   weekNumbers: number[];
 }
 
@@ -32,8 +32,8 @@ const GroupSchema = new mongoose.Schema({
   name: { type: String, required: true },
   course: Number,
   facultyId: Number,
-  schedule: [Object],
-  employees: [mongoose.SchemaTypes.ObjectId]
+  schedule: Array,
+  employees: [mongoose.Schema.Types.ObjectId]
 });
 
 export const Group = mongoose.model<IGroup>('Group', GroupSchema);

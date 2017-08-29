@@ -1,25 +1,33 @@
 import { EmployeeRaw } from './employee';
+import { GroupRaw } from './group';
 
 export interface ScheduleResponseRaw {
-    scheduleXmlModels: {
-        scheduleModel: ScheduleDayRaw[]
-    }
+    employee: string;
+    studentGroup: GroupRaw;
+    schedules: ScheduleDayRaw[];
+    examSchedules: ScheduleDayRaw[];
+    todayDate: string;
+    todaySchedules: ScheduleItemRaw[];
+    tomorrowDate: string;
+    tomorrowSchedules: ScheduleItemRaw[];
+    currentWeekNumber: number;
 }
 
 export interface ScheduleDayRaw {
     weekDay: string;
-    schedule: ScheduleItemRaw[] | ScheduleItemRaw;
+    schedule: ScheduleItemRaw[];
 }
 
 export interface ScheduleItemRaw {
-    zaoch: boolean;
-    weekNumber: string[] | string;
+    weekNumber: number[];
+    studentGroup: string[];
+    numSubgroup: number;
+    auditory: string[];
+    startLessonTime: string;
+    endLessonTime: string;
     subject: string;
-    studentGroup: string;
-    numSubgroup: string;
     note: string;
     lessonType: string;
-    lessonTime: string;
-    employee: EmployeeRaw;
-    auditory: string;
+    employee: EmployeeRaw[];
+    zaoch: boolean;
 }

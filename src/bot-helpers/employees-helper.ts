@@ -32,6 +32,6 @@ async function findEmployeesForGroup(group: IGroup, fullNameQuery: string) {
 async function findEmployeesFromAll(group: IGroup, fullNameQuery: string) {
   let fullNamePattern = new RegExp(fullNameQuery, 'i');
 
-  let groupEmployees = await Employee.find([{ fullNameKey: fullNamePattern }]);
+  let groupEmployees = await Employee.find({ fullNameKey: fullNamePattern });
   return groupEmployees;
 }
